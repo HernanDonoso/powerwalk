@@ -141,6 +141,7 @@
 <div id="tab-morning" style="display:none"></div>
 
 <script>
+(function() {
 const LAT = 59.3158, LON = 18.0812;
 const SV_DAYS  = ["Söndag","Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag"];
 const SV_SHORT = ["Sön","Mån","Tis","Ons","Tor","Fre","Lör"];
@@ -277,7 +278,7 @@ function formatDate(ds){
 }
 
 // ── SCORING ───────────────────────────────────────────────────────────────
-function score(d){
+function calcScore(d){
   if(d.isRainy) return 0;
   const t = d.temp;
   let ts = t>=7&&t<=18?100:t>=4&&t<7?80:t>=1&&t<4?55:t<1?35:75;
@@ -334,7 +335,7 @@ function darkMin(srStr){
 let days=[], fetchedAt=null;
 
 function renderAll(){
-  const scored = days.map(d=>({...d,score:score(d)}));
+  const scored = days.map(d=>({...d,score:calcScore(d)}));
   const top3   = [...scored].sort((a,b)=>b.score-a.score).slice(0,3);
   renderPicks(scored,top3);
   renderWeek(scored);
@@ -455,6 +456,13 @@ async function load(){
 }
 
 load();
+
+// Expose functions used by inline onclick handlers
+window.applyTimes = applyTimes;
+window.load = load;
+window.showTab = showTab;
+
+})();
 </script>
 </body>
 </html>
