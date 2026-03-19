@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Powerwalk Morning Scheduler – Södermalm</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0e1117;--card:#161b27;--card2:#1c2333;--border:#2a3347;--green:#3dffa0;--yellow:#ffd166;--red:#ff6b6b;--orange:#ff9f43;--blue:#64b5f6;--text:#e8edf5;--muted:#6b7a99;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:20px 16px 40px;max-width:480px;margin:0 auto;}
+  h1{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:2px;color:var(--green);line-height:1;}
+  .subtitle{font-size:.78rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;}
+  .smhi-badge{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,var(--card));border:1px solid color-mix(in srgb,var(--blue) 25%,var(--border));border-radius:20px;padding:3px 10px;margin-bottom:16px;}
+
+  /* LOADER */
+  .loader{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:16px;}
+  .loader-ring{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loader-text{font-size:.85rem;color:var(--muted);letter-spacing:.06em;}
+  .error-box{background:color-mix(in srgb,var(--red) 8%,var(--card));border:1px solid color-mix(in srgb,var(--red) 30%,var(--border));border-radius:12px;padding:16px;font-size:.85rem;color:var(--red);text-align:center;line-height:1.6;}
+  .btn-retry{margin-top:10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:7px 16px;border-radius:8px;cursor:pointer;}
+
+  /* TIME PICKER */
+  .time-picker{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;}
+  .tp-group{display:flex;flex-direction:column;flex:1;min-width:90px;}
+  .tp-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
+  .tp-input{background:var(--card2);border:1px solid var(--border);color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:1px;padding:8px 10px;border-radius:8px;width:100%;outline:none;transition:border-color .2s;}
+  .tp-input:focus{border-color:var(--green);}
+  .tp-select{background:var(--card2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;padding:9px 10px;border-radius:8px;width:100%;outline:none;cursor:pointer;transition:border-color .2s;}
+  .tp-select:focus{border-color:var(--green);}
+  .tp-divider{color:var(--border);font-size:1.3rem;padding-bottom:8px;flex-shrink:0;}
+  .tp-btn{background:color-mix(in srgb,var(--green) 12%,transparent);border:1px solid color-mix(in srgb,var(--green) 40%,var(--border));color:var(--green);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:all .15s;}
+  .tp-btn:hover{background:color-mix(in srgb,var(--green) 20%,transparent);}
+  .tp-btn.blue{background:color-mix(in srgb,var(--blue) 10%,transparent);border-color:color-mix(in srgb,var(--blue) 35%,var(--border));color:var(--blue);}
+  .tp-btn.blue:hover{background:color-mix(in srgb,var(--blue) 18%,transparent);}
+
+  /* TABS */
+  .tab-row{display:flex;gap:6px;margin-bottom:14px;}
+  .tab{flex:1;background:var(--card2);border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:500;padding:8px;border-radius:8px;cursor:pointer;text-align:center;transition:all .15s;}
+  .tab.active{background:color-mix(in srgb,var(--green) 12%,var(--card));border-color:color-mix(in srgb,var(--green) 40%,var(--border));color:var(--green);}
+
+  /* PICKS */
+  .top-pick{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:10px;position:relative;overflow:hidden;transition:transform .15s;}
+  .top-pick:hover{transform:translateY(-2px);}
+  .top-pick.pick-1{border-color:color-mix(in srgb,var(--green) 40%,var(--border));}
+  .top-pick.pick-2{border-color:color-mix(in srgb,var(--green) 20%,var(--border));}
+  .top-pick.pick-3{border-color:color-mix(in srgb,var(--yellow) 20%,var(--border));}
+  .pick-accent{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:16px 0 0 16px;}
+  .pick-1 .pick-accent{background:var(--green);}
+  .pick-2 .pick-accent{background:color-mix(in srgb,var(--green) 60%,transparent);}
+  .pick-3 .pick-accent{background:var(--yellow);}
+  .pick-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+  .pick-rank{font-family:'Bebas Neue',sans-serif;font-size:.85rem;letter-spacing:.1em;color:var(--muted);margin-bottom:2px;}
+  .pick-day{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:1px;line-height:1;color:var(--text);}
+  .pick-date{font-size:.78rem;color:var(--muted);margin-top:2px;}
+  .pick-score-wrap{text-align:right;}
+  .pick-score{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;}
+  .pick-score-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+  .pick-time-row{display:flex;align-items:center;gap:8px;background:var(--card2);border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+  .time-block{text-align:center;flex:1;}
+  .time-label{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;}
+  .time-val{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1px;color:var(--green);}
+  .time-divider{color:var(--border);font-size:1.2rem;}
+  .pick-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{font-size:.72rem;padding:3px 9px;border-radius:20px;font-weight:500;}
+  .chip-green{background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green);}
+  .chip-yellow{background:color-mix(in srgb,var(--yellow) 15%,transparent);color:var(--yellow);}
+  .chip-red{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red);}
+  .chip-blue{background:color-mix(in srgb,var(--blue) 15%,transparent);color:var(--blue);}
+  .pick-tip{font-size:.82rem;color:var(--muted);font-style:italic;margin-top:8px;line-height:1.4;border-top:1px solid var(--border);padding-top:8px;}
+
+  /* WEEK */
+  .week-grid{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .wday{display:flex;align-items:center;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;gap:10px;}
+  .wday.go{border-color:color-mix(in srgb,var(--green) 25%,var(--border));}
+  .wday.maybe{border-color:color-mix(in srgb,var(--yellow) 20%,var(--border));}
+  .wday.skip{opacity:.55;}
+  .wday-name{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;width:38px;flex-shrink:0;}
+  .wday-icon{font-size:1.2rem;flex-shrink:0;}
+  .wday-info{flex:1;min-width:0;}
+  .wday-temp{font-size:.85rem;font-weight:500;}
+  .wday-cond{font-size:.72rem;color:var(--muted);}
+  .wday-score-col{text-align:right;flex-shrink:0;}
+  .wday-score{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;}
+  .wday-verdict{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+
+  /* INFO BOXES */
+  .morning-box{background:color-mix(in srgb,var(--blue) 8%,var(--card));border:1px solid color-mix(in srgb,var(--blue) 25%,var(--border));border-radius:12px;padding:14px 16px;margin-bottom:12px;font-size:.83rem;line-height:1.55;color:var(--text);}
+  .morning-box strong{color:var(--blue);}
+  .info-box{background:color-mix(in srgb,var(--green) 6%,var(--card));border:1px solid color-mix(in srgb,var(--green) 20%,var(--border));border-radius:12px;padding:14px 16px;margin-bottom:12px;font-size:.83rem;line-height:1.55;color:var(--text);}
+  .info-box strong{color:var(--green);}
+  .last-updated{font-size:.72rem;color:var(--muted);margin-top:12px;}
+
+  /* ACCURACY BADGE */
+  .acc-note{font-size:.7rem;color:var(--muted);font-style:italic;margin-top:4px;}
+</style>
+</head>
+<body>
+
+<div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:4px"><h1>POWERWALK</h1></div>
+<div class="subtitle" id="subtitle">Barnängsgatan 7, Södermalm · Hämtar väderdata...</div>
+<div class="smhi-badge" id="smhi-badge" style="display:none">🇸🇪 SMHI · Officiell svensk väderprognos</div>
+
+<div class="time-picker">
+  <div class="tp-group">
+    <div class="tp-label">Starttid</div>
+    <input type="time" class="tp-input" id="start-time" value="05:30" onchange="applyTimes()">
+  </div>
+  <div class="tp-divider">→</div>
+  <div class="tp-group">
+    <div class="tp-label">Längd</div>
+    <select class="tp-select" id="duration" onchange="applyTimes()">
+      <option value="20">20 min</option>
+      <option value="30" selected>30 min</option>
+      <option value="40">40 min</option>
+      <option value="45">45 min</option>
+      <option value="60">60 min</option>
+      <option value="75">75 min</option>
+      <option value="90">90 min</option>
+    </select>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+    <div class="tp-label">&nbsp;</div>
+    <button class="tp-btn" onclick="applyTimes()">✓ Tillämpa</button>
+    <button class="tp-btn blue" onclick="load()">↻ Väder</button>
+  </div>
+</div>
+
+<div class="tab-row" id="tabs" style="display:none">
+  <button class="tab active" onclick="showTab('picks')">🏆 Bästa dagarna</button>
+  <button class="tab" onclick="showTab('week')">📅 Hela veckan</button>
+  <button class="tab" onclick="showTab('morning')">🌅 Morgoninfo</button>
+</div>
+
+<div id="main-content">
+  <div class="loader"><div class="loader-ring"></div><div class="loader-text">Hämtar SMHI-prognos för Södermalm...</div></div>
+</div>
+<div id="tab-picks" style="display:none"></div>
+<div id="tab-week"  style="display:none"></div>
+<div id="tab-morning" style="display:none"></div>
+
+<script>
+const LAT = 59.3158, LON = 18.0812;
+const SV_DAYS  = ["Söndag","Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag"];
+const SV_SHORT = ["Sön","Mån","Tis","Ons","Tor","Fre","Lör"];
+
+// SMHI Wsymb2 codes → label + rain flag
+const WSYMB = {
+  1: {l:"Klart",          rain:false},
+  2: {l:"Lätt molnighet", rain:false},
+  3: {l:"Halvklart",      rain:false},
+  4: {l:"Molnigt",        rain:false},
+  5: {l:"Mulet",          rain:false},
+  6: {l:"Dimma",          rain:false},
+  7: {l:"Lätt regnskur",  rain:true},
+  8: {l:"Regnskur",       rain:true},
+  9: {l:"Kraftig regnskur",rain:true},
+ 10: {l:"Åskskur",        rain:true},
+ 11: {l:"Lätt snöblandat regn",rain:true},
+ 12: {l:"Snöblandat regn",rain:true},
+ 13: {l:"Kraftig snöblandat regn",rain:true},
+ 14: {l:"Lätt snöskur",   rain:true},
+ 15: {l:"Snöskur",        rain:true},
+ 16: {l:"Kraftig snöskur",rain:true},
+ 17: {l:"Åska",           rain:true},
+ 18: {l:"Lätt regn",      rain:true},
+ 19: {l:"Regn",           rain:true},
+ 20: {l:"Kraftigt regn",  rain:true},
+ 21: {l:"Åska med regn",  rain:true},
+ 22: {l:"Lätt snöblandat regn",rain:true},
+ 23: {l:"Snöblandat regn",rain:true},
+ 24: {l:"Kraftigt snöblandat regn",rain:true},
+ 25: {l:"Lätt snöfall",   rain:true},
+ 26: {l:"Snöfall",        rain:true},
+ 27: {l:"Kraftigt snöfall",rain:true},
+};
+
+// Sunrise approx for Stockholm (improves each week in spring)
+function getSunrise(dateStr) {
+  const d = new Date(dateStr);
+  const dayOfYear = Math.floor((d - new Date(d.getFullYear(),0,0)) / 86400000);
+  const mins = Math.round(6*60+25 - Math.max(0,(dayOfYear-77))*2.2);
+  return `${String(Math.floor(mins/60)).padStart(2,'0')}:${String(mins%60).padStart(2,'0')}`;
+}
+
+// ── TIME STATE ───────────────────────────────────────────────────────────
+let startMinutes = 5*60+30;
+let durationMin  = 30;
+
+function getEndMinutes(){ return startMinutes + durationMin; }
+function fmtMin(m){ const h=Math.floor(m/60)%24,mn=m%60; return `${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`; }
+
+function applyTimes(){
+  const v = document.getElementById('start-time').value;
+  if(v){ const[h,m]=v.split(':').map(Number); startMinutes=h*60+m; }
+  durationMin = parseInt(document.getElementById('duration').value)||30;
+  if(days.length) renderAll();
+}
+
+// ── FETCH SMHI ───────────────────────────────────────────────────────────
+async function fetchWeather(){
+  const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${LON}/lat/${LAT}/data.json`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(`SMHI API svarade med HTTP ${r.status}`);
+  return r.json();
+}
+
+// ── PARSE: build per-day morning data ───────────────────────────────────
+function parseDays(data) {
+  const CET_OFFSET = 60; // minutes, rough UTC+1
+
+  // Index all entries by local datetime
+  const byHour = {};
+  for(const ts of data.timeSeries){
+    const utcMs = new Date(ts.validTime).getTime();
+    const localMs = utcMs + CET_OFFSET*60000;
+    const d = new Date(localMs);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}|${d.getUTCHours()}`;
+    const vals = {};
+    for(const p of ts.parameters) vals[p.name] = p.values[0];
+    byHour[key] = vals;
+  }
+
+  // For each of next 7 days, find closest hour to startMinutes
+  const result = [];
+  const nowLocal = new Date(Date.now() + CET_OFFSET*60000);
+  const todayStr = `${nowLocal.getUTCFullYear()}-${String(nowLocal.getUTCMonth()+1).padStart(2,'0')}-${String(nowLocal.getUTCDate()).padStart(2,'0')}`;
+
+  for(let i=1; i<=7; i++){
+    const d = new Date(nowLocal);
+    d.setUTCDate(d.getUTCDate() + i);
+    const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+
+    // Find nearest available hour to startMinutes
+    const wantHour = Math.floor(startMinutes/60);
+    let best = null, bestDiff = 999;
+    for(let h=0; h<24; h++){
+      const key = `${dateStr}|${h}`;
+      if(byHour[key]){
+        const diff = Math.abs(h - wantHour);
+        if(diff < bestDiff){ bestDiff=diff; best={key,h,vals:byHour[key]}; }
+      }
+    }
+    if(!best) continue;
+
+    const vals = best.vals;
+    const jsDay = new Date(dateStr+'T12:00:00').getDay();
+    const sym = vals['Wsymb2'] || 0;
+    const symInfo = WSYMB[sym] || {l:'Okänt', rain:false};
+    const rain = vals['pmean'] || 0;
+    const pcat = vals['pcat'] || 0; // precip category: 0=none,1=snow,2=snow+rain,3=rain,4=drizzle,5=freezing rain,6=freezing drizzle
+
+    result.push({
+      date: dateStr,
+      dayName:   SV_DAYS[jsDay],
+      shortName: SV_SHORT[jsDay],
+      dateLabel: formatDate(dateStr),
+      temp:  vals['t'],
+      wind:  vals['ws'],
+      gust:  vals['gust'],
+      rain:  rain,
+      pcat:  pcat,
+      wsymb: sym,
+      condLabel: symInfo.l,
+      isRainy: symInfo.rain || rain > 0 || pcat > 0,
+      dataHour: best.h,
+      sunrise: getSunrise(dateStr),
+    });
+  }
+  return result;
+}
+
+function formatDate(ds){
+  const d=new Date(ds+'T12:00:00');
+  return `${d.getDate()} ${["","jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"][d.getMonth()+1]}`;
+}
+
+// ── SCORING ───────────────────────────────────────────────────────────────
+function score(d){
+  if(d.isRainy) return 0;
+  const t = d.temp;
+  let ts = t>=7&&t<=18?100:t>=4&&t<7?80:t>=1&&t<4?55:t<1?35:75;
+  let ws = [1,2,3].includes(d.wsymb)?100:[4,5].includes(d.wsymb)?80:d.wsymb===6?60:75;
+  let wis = d.wind<=3?100:d.wind<=6?85:d.wind<=9?65:d.wind<=12?40:20;
+  return Math.round(ts*.45 + ws*.22 + wis*.33);
+}
+
+function scoreColor(s){ return s>=80?"var(--green)":s>=60?"var(--yellow)":s>=40?"var(--orange)":"var(--red)"; }
+function verdict(s,rainy){
+  if(rainy) return{t:"SKIPPA 🌧️",c:"skip"};
+  return s>=80?{t:"GÅ UT",c:"go"}:s>=60?{t:"KAN GÅ",c:"maybe"}:{t:"SKIPPA",c:"skip"};
+}
+
+function dayIcon(d){
+  if(d.isRainy) return d.wsymb>=25?"❄️":"🌧️";
+  if(d.temp<2) return "🥶";
+  if([1].includes(d.wsymb)) return "☀️";
+  if([2,3].includes(d.wsymb)) return "🌤️";
+  return "🌥️";
+}
+
+function buildChips(d){
+  const c=[];
+  const t=d.temp;
+  c.push(t>=7&&t<=18?{l:`${t.toFixed(1)}°C ✓`,cl:"chip-green"}:t>=4?{l:`${t.toFixed(1)}°C`,cl:"chip-yellow"}:{l:`${t.toFixed(1)}°C ❄️`,cl:"chip-red"});
+  if(d.isRainy){
+    c.push({l:`${d.condLabel} — SKIPPA`,cl:"chip-red"});
+  } else {
+    c.push({l:`${d.condLabel} ✓`,cl:"chip-green"});
+  }
+  c.push(d.wind<=3?{l:`${d.wind} m/s 💨✓`,cl:"chip-green"}:d.wind<=6?{l:`${d.wind} m/s 💨`,cl:"chip-yellow"}:d.wind<=9?{l:`${d.wind} m/s 💨`,cl:"chip-red"}:{l:`${d.wind} m/s 🌬️`,cl:"chip-red"});
+  c.push({l:`${fmtMin(startMinutes)}–${fmtMin(getEndMinutes())}`,cl:"chip-blue"});
+  return c;
+}
+
+function buildTip(d, rank){
+  if(d.isRainy) return "Regn eller duggregn väntas — ta det som vildag eller träna inomhus.";
+  const t=d.temp;
+  if(t<1) return "Mycket kallt. Dubbla lager, mössa, vantar — eller ta det som vildag.";
+  if(t<4) return "Kallt! Fleece + vindtät jacka + handskar. Du klarar det!";
+  if(t<7) return "Lite kyligt — ta en extra tröja. Kroppen värms snabbt upp i rörelse.";
+  if(d.wind>9) return "Blåsigt! Välj ett vindskyddat promenadstråk, t.ex. längs kajen inåt.";
+  if(rank===1) return "Perfekta morgonförhållanden. Lägg fram kläder kvällen innan!";
+  return "Bra morgon. Starta mjukt de första 5 minuterna som uppvärmning.";
+}
+
+function darkMin(srStr){
+  const[h,m]=srStr.split(':').map(Number);
+  return Math.max(0,h*60+m-startMinutes);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+let days=[], fetchedAt=null;
+
+function renderAll(){
+  const scored = days.map(d=>({...d,score:score(d)}));
+  const top3   = [...scored].sort((a,b)=>b.score-a.score).slice(0,3);
+  renderPicks(scored,top3);
+  renderWeek(scored);
+  renderMorning(scored);
+  document.getElementById('main-content').style.display='none';
+  document.getElementById('tabs').style.display='flex';
+  document.getElementById('smhi-badge').style.display='inline-flex';
+  document.getElementById('subtitle').textContent=`Barnängsgatan 7, Södermalm · ${fmtMin(startMinutes)}–${fmtMin(getEndMinutes())} · ${fetchedAt}`;
+  showTab('picks');
+}
+
+function renderPicks(scored,top3){
+  const el=document.getElementById('tab-picks');
+  const rl=["🥇 BÄSTA DAGEN","🥈 NÄST BÄSTA","🥉 TREDJE VAL"];
+  const pc=["pick-1","pick-2","pick-3"];
+  el.innerHTML=top3.map((d,ri)=>{
+    const chips=buildChips(d).map(c=>`<span class="chip ${c.cl}">${c.l}</span>`).join('');
+    const tip=buildTip(d,ri+1);
+    const color=scoreColor(d.score);
+    const accNote = d.dataHour===Math.floor(startMinutes/60)
+      ? `Exakt timdata kl ${String(d.dataHour).padStart(2,'0')}:00`
+      : `Närmaste data: kl ${String(d.dataHour).padStart(2,'0')}:00`;
+    return `<div class="top-pick ${pc[ri]}"><div class="pick-accent"></div>
+      <div class="pick-top">
+        <div>
+          <div class="pick-rank">${rl[ri]}</div>
+          <div class="pick-day">${d.dayName}</div>
+          <div class="pick-date">${d.dateLabel}</div>
+          <div class="acc-note">📡 ${accNote}</div>
+        </div>
+        <div class="pick-score-wrap">
+          <div class="pick-score" style="color:${color}">${d.score}</div>
+          <div class="pick-score-label">poäng</div>
+        </div>
+      </div>
+      <div class="pick-time-row">
+        <div class="time-block"><div class="time-label">Gå ut</div><div class="time-val">${fmtMin(startMinutes)}</div></div>
+        <div class="time-divider">→</div>
+        <div class="time-block"><div class="time-label">Temp ute</div><div class="time-val">${d.temp.toFixed(1)}°</div></div>
+        <div class="time-divider">→</div>
+        <div class="time-block"><div class="time-label">Hemma</div><div class="time-val">${fmtMin(getEndMinutes())}</div></div>
+      </div>
+      <div class="pick-chips">${chips}</div>
+      <div class="pick-tip">💡 ${tip}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML+=`<div class="info-box"><strong>Rekommendation:</strong> Välj 2–3 av de bästa dagarna ovan och lägg ut kläder kvällen innan. Promenad ${fmtMin(startMinutes)}–${fmtMin(getEndMinutes())} (${durationMin} min).</div>
+  <div class="last-updated">🇸🇪 SMHI-data hämtad: ${fetchedAt}</div>`;
+}
+
+function renderWeek(scored){
+  const el=document.getElementById('tab-week');
+  el.innerHTML=`<div class="week-grid">${scored.map(d=>{
+    const v=verdict(d.score,d.isRainy);
+    const color=scoreColor(d.score);
+    return `<div class="wday ${v.c}">
+      <div class="wday-name">${d.shortName}</div>
+      <div class="wday-icon">${dayIcon(d)}</div>
+      <div class="wday-info">
+        <div class="wday-temp">${d.temp.toFixed(1)}°C · ${d.dateLabel}</div>
+        <div class="wday-cond">${d.condLabel} · 💨 ${d.wind} m/s</div>
+      </div>
+      <div class="wday-score-col">
+        <div class="wday-score" style="color:${color}">${d.score}</div>
+        <div class="wday-verdict">${v.t}</div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderMorning(scored){
+  const el=document.getElementById('tab-morning');
+  const hasDark = scored.some(d=>darkMin(d.sunrise)>0);
+  const rows=scored.map(d=>{
+    const dm=darkMin(d.sunrise);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;width:34px;flex-shrink:0">${d.shortName}</div>
+      <div style="flex:1">
+        <div style="font-size:.82rem;font-weight:500">🌅 Soluppgång: <strong style="color:var(--yellow)">${d.sunrise}</strong></div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:2px">${dm>0?`Du startar ${fmtMin(startMinutes)} — mörkt i ~${dm} min`:'Det är ljust när du startar ☀️'}</div>
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);text-align:right">${d.temp.toFixed(1)}°C<br>${d.condLabel}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`${hasDark?`<div class="morning-box"><strong>⚠️ Kontrollera soluppgångstiden!</strong> Vissa morgnar startar du fortfarande i mörker. Reflex och pannlampa kan behövas.</div>`:''}
+    ${rows}
+    <div class="morning-box" style="margin-top:10px"><strong>🔦 Checklista för mörk morgonpromenad:</strong><br>✓ Reflexväst &nbsp;·&nbsp; ✓ Pannlampa &nbsp;·&nbsp; ✓ Välbelysta gator &nbsp;·&nbsp; ✓ Telefon laddad</div>`;
+}
+
+function showTab(t){
+  ['picks','week','morning'].forEach(id=>{document.getElementById(`tab-${id}`).style.display=id===t?'block':'none';});
+  document.querySelectorAll('.tab').forEach((el,i)=>{el.classList.toggle('active',['picks','week','morning'][i]===t);});
+}
+
+// ── LOAD ─────────────────────────────────────────────────────────────────
+async function load(){
+  document.getElementById('main-content').innerHTML='<div class="loader"><div class="loader-ring"></div><div class="loader-text">Hämtar SMHI-prognos för Södermalm...</div></div>';
+  document.getElementById('main-content').style.display='block';
+  document.getElementById('tabs').style.display='none';
+  document.getElementById('smhi-badge').style.display='none';
+  ['picks','week','morning'].forEach(id=>{
+    const el=document.getElementById('tab-'+id);
+    el.style.display='none'; el.innerHTML='';
+  });
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',i===0));
+
+  try{
+    const data = await fetchWeather();
+    days = parseDays(data);
+    if(!days.length) throw new Error('Inga prognospunkter hittades för vald tid');
+    fetchedAt = new Date().toLocaleString('sv-SE',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'});
+    renderAll();
+  } catch(err){
+    document.getElementById('main-content').style.display='block';
+    document.getElementById('main-content').innerHTML=`<div class="error-box">⚠️ Kunde inte hämta SMHI-data.<br><small style="opacity:.7">${err.message}</small><br><button class="btn-retry" onclick="load()">Försök igen</button></div>`;
+  }
+}
+
+load();
+</script>
+</body>
+</html>
